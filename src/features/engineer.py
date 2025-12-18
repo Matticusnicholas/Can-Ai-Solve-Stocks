@@ -132,10 +132,13 @@ class FeatureEngineer:
         if len(df) < min_samples:
             raise ValueError(f"Not enough samples: {len(df)} < {min_samples}")
 
-        # Get feature columns
+        # Get feature columns - IMPORTANT: exclude forward-looking columns to prevent data leakage
         exclude_cols = ['date', 'ticker', 'open', 'high', 'low', 'close', 'volume',
                         'dividends', 'stock_splits', 'expected_return',
-                        target_col, 'sector', 'industry']
+                        target_col, 'sector', 'industry',
+                        # Forward-looking columns (DATA LEAKAGE - must exclude!)
+                        'max_gain_forward', 'max_loss_forward', 'days_to_breakout',
+                        'gain_10pct', 'gain_15pct', 'gain_25pct', 'gain_30pct']
         feature_cols = [c for c in df.columns if c not in exclude_cols]
 
         # Drop columns with too many NaN
