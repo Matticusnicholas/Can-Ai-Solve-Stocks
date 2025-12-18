@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Filter Optimizer</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #e0e0e0;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 40px 0;
+            border-bottom: 1px solid #2a2a4a;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: #4fc3f7;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #8e8ea0;
+            font-size: 1.1rem;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: rgba(42, 42, 74, 0.6);
+            border-radius: 12px;
+            padding: 24px;
+            border: 1px solid #3a3a5a;
+            backdrop-filter: blur(10px);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            color: #4fc3f7;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .status-ready { background: #4caf50; }
+        .status-pending { background: #ff9800; }
+        .status-error { background: #f44336; }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4fc3f7 0%, #29b6f6 100%);
+            color: #1a1a2e;
+            font-weight: 600;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(79, 195, 247, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(79, 195, 247, 0.2);
+            color: #4fc3f7;
+            border: 1px solid #4fc3f7;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .stat-item {
+            background: rgba(26, 26, 46, 0.5);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #4fc3f7;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: #8e8ea0;
+            margin-top: 5px;
+        }
+
+        .filter-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .filter-item {
+            background: rgba(26, 26, 46, 0.5);
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .filter-rule {
+            font-family: 'Monaco', 'Menlo', monospace;
+            color: #81c784;
+        }
+
+        .filter-importance {
+            font-size: 0.85rem;
+            color: #ff9800;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: rgba(26, 26, 46, 0.5);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 15px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4fc3f7 0%, #29b6f6 100%);
+            transition: width 0.3s ease;
+        }
+
+        .message {
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        .message-info { background: rgba(79, 195, 247, 0.2); color: #4fc3f7; }
+        .message-success { background: rgba(76, 175, 80, 0.2); color: #81c784; }
+        .message-error { background: rgba(244, 67, 54, 0.2); color: #e57373; }
+
+        .chart-container {
+            height: 300px;
+            margin-top: 20px;
+        }
+
+        .tab-container {
+            margin-bottom: 20px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            border-bottom: 1px solid #3a3a5a;
+            padding-bottom: 10px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            background: transparent;
+            border: none;
+            color: #8e8ea0;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            color: #4fc3f7;
+            border-bottom: 2px solid #4fc3f7;
+        }
+
+        .tab:hover {
+            color: #4fc3f7;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        .metrics-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .metrics-table th,
+        .metrics-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #3a3a5a;
+        }
+
+        .metrics-table th {
+            color: #4fc3f7;
+            font-weight: 600;
+        }
+
+        .copy-btn {
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            background: rgba(79, 195, 247, 0.2);
+            border: 1px solid #4fc3f7;
+            border-radius: 4px;
+            color: #4fc3f7;
+            cursor: pointer;
+        }
+
+        .copy-btn:hover {
+            background: rgba(79, 195, 247, 0.4);
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #4fc3f7;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .config-input {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .input-group label {
+            font-size: 0.9rem;
+            color: #8e8ea0;
+        }
+
+        .input-group input {
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #3a3a5a;
+            background: rgba(26, 26, 46, 0.5);
+            color: #e0e0e0;
+            font-size: 1rem;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #4fc3f7;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useCallback } = React;
+
+        // API functions
+        const api = {
+            getStatus: () => fetch('/api/status').then(r => r.json()),
+            loadData: () => fetch('/api/load-data', { method: 'POST' }).then(r => r.json()),
+            collectData: () => fetch('/api/collect-data', { method: 'POST' }).then(r => r.json()),
+            train: (config) => fetch('/api/train', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(config)
+            }).then(r => r.json()),
+            optimize: (config) => fetch('/api/optimize', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(config)
+            }).then(r => r.json()),
+            getFilters: () => fetch('/api/filters').then(r => r.json()),
+            getFeatureImportance: (n = 30) => fetch(`/api/feature-importance?top_n=${n}`).then(r => r.json()),
+            backtest: (config) => fetch('/api/backtest', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(config)
+            }).then(r => r.json()),
+            getJobStatus: (id) => fetch(`/api/job/${id}`).then(r => r.json()),
+        };
+
+        // Components
+        function StatusCard({ status }) {
+            return (
+                <div className="card">
+                    <div className="card-header">
+                        <h2 className="card-title">System Status</h2>
+                    </div>
+                    <div className="stats-grid">
+                        <div className="stat-item">
+                            <div className="stat-value">
+                                <span className={`status-indicator ${status.data_loaded ? 'status-ready' : 'status-pending'}`}></span>
+                            </div>
+                            <div className="stat-label">Data Loaded</div>
+                        </div>
+                        <div className="stat-item">
+                            <div className="stat-value">
+                                <span className={`status-indicator ${status.model_trained ? 'status-ready' : 'status-pending'}`}></span>
+                            </div>
+                            <div className="stat-label">Model Trained</div>
+                        </div>
+                        <div className="stat-item">
+                            <div className="stat-value">{status.num_tickers || 0}</div>
+                            <div className="stat-label">Tickers</div>
+                        </div>
+                        <div className="stat-item">
+                            <div className="stat-value">{status.num_features || 0}</div>
+                            <div className="stat-label">Features</div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function DataCard({ status, onLoad, onCollect, loading, message }) {
+            return (
+                <div className="card">
+                    <div className="card-header">
+                        <h2 className="card-title">Data Collection</h2>
+                    </div>
+                    <p style={{ color: '#8e8ea0', marginBottom: '15px' }}>
+                        Load existing S&P 500 data or collect fresh data from Yahoo Finance.
+                    </p>
+                    <div>
+                        <button className="btn btn-primary" onClick={onLoad} disabled={loading}>
+                            {loading ? <span className="loading-spinner"></span> : null}
+                            Load Existing Data
+                        </button>
+                        <button className="btn btn-secondary" onClick={onCollect} disabled={loading}>
+                            Collect New Data
+                        </button>
+                    </div>
+                    {message && (
+                        <div className={`message message-${message.type}`}>
+                            {message.text}
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        function TrainingCard({ status, onTrain, loading, progress, message }) {
+            const [config, setConfig] = useState({
+                breakout_threshold: 0.20,
+                lookforward_days: 63,
+                test_size: 0.2
+            });
+
+            return (
+                <div className="card">
+                    <div className="card-header">
+                        <h2 className="card-title">Model Training</h2>
+                    </div>
+                    <div className="config-input">
+                        <div className="input-group">
+                            <label>Breakout Threshold (%)</label>
+                            <input
+                                type="number"
+                                value={config.breakout_threshold * 100}
+                                onChange={e => setConfig({...config, breakout_threshold: e.target.value / 100})}
+                                step="5"
+                            />
+                        </div>
+                        <div className="input-group">
+                            <label>Lookforward Days</label>
+                            <input
+                                type="number"
+                                value={config.lookforward_days}
+                                onChange={e => setConfig({...config, lookforward_days: parseInt(e.target.value)})}
+                            />
+                        </div>
+                    </div>
+                    <button
+                        className="btn btn-primary"
+                        onClick={() => onTrain(config)}
+                        disabled={!status.data_loaded || loading}
+                        style={{ marginTop: '15px' }}
+                    >
+                        {loading ? <span className="loading-spinner"></span> : null}
+                        Train Models
+                    </button>
+                    {progress > 0 && progress < 100 && (
+                        <div className="progress-bar">
+                            <div className="progress-fill" style={{ width: `${progress}%` }}></div>
+                        </div>
+                    )}
+                    {message && (
+                        <div className={`message message-${message.type}`}>
+                            {message.text}
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        function OptimizationCard({ status, onOptimize, loading, message }) {
+            const [config, setConfig] = useState({
+                top_n_features: 30,
+                min_precision: 0.4,
+                target_recall: 0.3
+            });
+
+            return (
+                <div className="card">
+                    <div className="card-header">
+                        <h2 className="card-title">Filter Optimization</h2>
+                    </div>
+                    <div className="config-input">
+                        <div className="input-group">
+                            <label>Top N Features</label>
+                            <input
+                                type="number"
+                                value={config.top_n_features}
+                                onChange={e => setConfig({...config, top_n_features: parseInt(e.target.value)})}
+                            />
+                        </div>
+                        <div className="input-group">
+                            <label>Min Precision</label>
+                            <input
+                                type="number"
+                                value={config.min_precision}
+                                onChange={e => setConfig({...config, min_precision: parseFloat(e.target.value)})}
+                                step="0.05"
+                            />
+                        </div>
+                    </div>
+                    <button
+                        className="btn btn-primary"
+                        onClick={() => onOptimize(config)}
+                        disabled={!status.model_trained || loading}
+                        style={{ marginTop: '15px' }}
+                    >
+                        {loading ? <span className="loading-spinner"></span> : null}
+                        Optimize Filters
+                    </button>
+                    {message && (
+                        <div className={`message message-${message.type}`}>
+                            {message.text}
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        function FiltersCard({ filters }) {
+            const copyFilters = () => {
+                const text = filters.rules?.join('\n') || '';
+                navigator.clipboard.writeText(text);
+            };
+
+            return (
+                <div className="card full-width">
+                    <div className="card-header">
+                        <h2 className="card-title">Optimal Filter Criteria</h2>
+                        <button className="copy-btn" onClick={copyFilters}>Copy All</button>
+                    </div>
+                    {filters.criteria?.length > 0 ? (
+                        <div className="filter-list">
+                            {filters.criteria.map((criterion, i) => (
+                                <div key={i} className="filter-item">
+                                    <span className="filter-rule">
+                                        {criterion.feature} {criterion.operator} {criterion.threshold.toFixed(4)}
+                                    </span>
+                                    <span className="filter-importance">
+                                        Importance: {(criterion.importance * 100).toFixed(1)}%
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p style={{ color: '#8e8ea0' }}>No filters optimized yet. Run optimization first.</p>
+                    )}
+                </div>
+            );
+        }
+
+        function FeatureImportanceCard({ features }) {
+            useEffect(() => {
+                if (features?.length > 0) {
+                    const data = [{
+                        x: features.slice(0, 20).map(f => f.importance),
+                        y: features.slice(0, 20).map(f => f.feature),
+                        type: 'bar',
+                        orientation: 'h',
+                        marker: { color: '#4fc3f7' }
+                    }];
+                    const layout = {
+                        title: 'Top 20 Most Important Features',
+                        paper_bgcolor: 'transparent',
+                        plot_bgcolor: 'transparent',
+                        font: { color: '#e0e0e0' },
+                        margin: { l: 200, r: 20, t: 40, b: 40 },
+                        xaxis: { gridcolor: '#3a3a5a' },
+                        yaxis: { gridcolor: '#3a3a5a', autorange: 'reversed' }
+                    };
+                    Plotly.newPlot('feature-chart', data, layout, { responsive: true });
+                }
+            }, [features]);
+
+            return (
+                <div className="card full-width">
+                    <div className="card-header">
+                        <h2 className="card-title">Feature Importance</h2>
+                    </div>
+                    <div id="feature-chart" className="chart-container" style={{ height: '500px' }}></div>
+                </div>
+            );
+        }
+
+        function BacktestCard({ backtest }) {
+            useEffect(() => {
+                if (backtest?.period_results?.length > 0) {
+                    const periods = backtest.period_results;
+                    const data = [
+                        {
+                            x: periods.map(p => p.start),
+                            y: periods.map(p => p.precision * 100),
+                            name: 'Precision %',
+                            type: 'scatter',
+                            mode: 'lines+markers',
+                            marker: { color: '#4fc3f7' }
+                        },
+                        {
+                            x: periods.map(p => p.start),
+                            y: periods.map(p => p.recall * 100),
+                            name: 'Recall %',
+                            type: 'scatter',
+                            mode: 'lines+markers',
+                            marker: { color: '#81c784' }
+                        }
+                    ];
+                    const layout = {
+                        title: 'Backtest Performance Over Time',
+                        paper_bgcolor: 'transparent',
+                        plot_bgcolor: 'transparent',
+                        font: { color: '#e0e0e0' },
+                        xaxis: { gridcolor: '#3a3a5a' },
+                        yaxis: { gridcolor: '#3a3a5a', title: 'Percentage' },
+                        legend: { x: 0, y: 1.1, orientation: 'h' }
+                    };
+                    Plotly.newPlot('backtest-chart', data, layout, { responsive: true });
+                }
+            }, [backtest]);
+
+            return (
+                <div className="card full-width">
+                    <div className="card-header">
+                        <h2 className="card-title">Backtest Results</h2>
+                    </div>
+                    {backtest?.precision ? (
+                        <>
+                            <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+                                <div className="stat-item">
+                                    <div className="stat-value">{(backtest.precision.mean * 100).toFixed(1)}%</div>
+                                    <div className="stat-label">Avg Precision</div>
+                                </div>
+                                <div className="stat-item">
+                                    <div className="stat-value">{(backtest.recall.mean * 100).toFixed(1)}%</div>
+                                    <div className="stat-label">Avg Recall</div>
+                                </div>
+                                <div className="stat-item">
+                                    <div className="stat-value">{(backtest.win_rate.mean * 100).toFixed(1)}%</div>
+                                    <div className="stat-label">Win Rate</div>
+                                </div>
+                                <div className="stat-item">
+                                    <div className="stat-value">{backtest.total_breakouts_captured}</div>
+                                    <div className="stat-label">Breakouts Captured</div>
+                                </div>
+                            </div>
+                            <div id="backtest-chart" className="chart-container"></div>
+                        </>
+                    ) : (
+                        <p style={{ color: '#8e8ea0' }}>No backtest results yet. Run backtest after optimization.</p>
+                    )}
+                </div>
+            );
+        }
+
+        // Main App
+        function App() {
+            const [status, setStatus] = useState({});
+            const [filters, setFilters] = useState({});
+            const [features, setFeatures] = useState([]);
+            const [backtest, setBacktest] = useState({});
+            const [loading, setLoading] = useState({});
+            const [messages, setMessages] = useState({});
+            const [progress, setProgress] = useState({});
+
+            const refreshStatus = useCallback(async () => {
+                try {
+                    const data = await api.getStatus();
+                    setStatus(data);
+                } catch (e) {
+                    console.error('Status fetch failed:', e);
+                }
+            }, []);
+
+            useEffect(() => {
+                refreshStatus();
+                // Also try to load existing filters and features
+                api.getFilters().then(setFilters).catch(() => {});
+                api.getFeatureImportance(30).then(d => setFeatures(d.features || [])).catch(() => {});
+            }, [refreshStatus]);
+
+            const setMessage = (key, type, text) => {
+                setMessages(m => ({ ...m, [key]: { type, text } }));
+                setTimeout(() => setMessages(m => ({ ...m, [key]: null })), 5000);
+            };
+
+            const handleLoadData = async () => {
+                setLoading(l => ({ ...l, data: true }));
+                try {
+                    const result = await api.loadData();
+                    setMessage('data', 'success', `Loaded ${result.rows.toLocaleString()} rows for ${result.tickers} tickers`);
+                    refreshStatus();
+                } catch (e) {
+                    setMessage('data', 'error', e.message || 'Failed to load data');
+                }
+                setLoading(l => ({ ...l, data: false }));
+            };
+
+            const handleCollectData = async () => {
+                setLoading(l => ({ ...l, data: true }));
+                try {
+                    const result = await api.collectData();
+                    setMessage('data', 'info', 'Data collection started. This may take several minutes...');
+                    // Poll for status
+                    const pollStatus = setInterval(async () => {
+                        const jobStatus = await api.getJobStatus(result.job_id);
+                        if (jobStatus.status === 'completed') {
+                            clearInterval(pollStatus);
+                            setMessage('data', 'success', 'Data collection complete!');
+                            refreshStatus();
+                            setLoading(l => ({ ...l, data: false }));
+                        } else if (jobStatus.status === 'failed') {
+                            clearInterval(pollStatus);
+                            setMessage('data', 'error', jobStatus.error);
+                            setLoading(l => ({ ...l, data: false }));
+                        }
+                    }, 5000);
+                } catch (e) {
+                    setMessage('data', 'error', e.message || 'Failed to start collection');
+                    setLoading(l => ({ ...l, data: false }));
+                }
+            };
+
+            const handleTrain = async (config) => {
+                setLoading(l => ({ ...l, train: true }));
+                setProgress(p => ({ ...p, train: 0 }));
+                try {
+                    const result = await api.train(config);
+                    setMessage('train', 'info', 'Training started...');
+                    // Poll for status
+                    const pollStatus = setInterval(async () => {
+                        const jobStatus = await api.getJobStatus(result.job_id);
+                        setProgress(p => ({ ...p, train: jobStatus.progress || 0 }));
+                        if (jobStatus.status === 'completed') {
+                            clearInterval(pollStatus);
+                            setMessage('train', 'success', `Training complete! AUC-ROC: ${jobStatus.metrics?.auc_roc?.toFixed(4)}`);
+                            refreshStatus();
+                            api.getFeatureImportance(30).then(d => setFeatures(d.features || []));
+                            setLoading(l => ({ ...l, train: false }));
+                        } else if (jobStatus.status === 'failed') {
+                            clearInterval(pollStatus);
+                            setMessage('train', 'error', jobStatus.error);
+                            setLoading(l => ({ ...l, train: false }));
+                        }
+                    }, 2000);
+                } catch (e) {
+                    setMessage('train', 'error', e.message || 'Failed to start training');
+                    setLoading(l => ({ ...l, train: false }));
+                }
+            };
+
+            const handleOptimize = async (config) => {
+                setLoading(l => ({ ...l, optimize: true }));
+                try {
+                    const result = await api.optimize(config);
+                    setFilters(result.screener_config || {});
+                    setMessage('optimize', 'success', `Found ${result.num_criteria} optimal filter criteria!`);
+                    // Run backtest automatically
+                    const btResult = await api.backtest({ period_months: 3 });
+                    setBacktest(btResult);
+                } catch (e) {
+                    setMessage('optimize', 'error', e.message || 'Optimization failed');
+                }
+                setLoading(l => ({ ...l, optimize: false }));
+            };
+
+            return (
+                <div className="container">
+                    <header>
+                        <h1>Stock Filter Optimizer</h1>
+                        <p className="subtitle">AI-powered discovery of optimal stock screening criteria for 3-month breakouts</p>
+                    </header>
+
+                    <div className="dashboard">
+                        <StatusCard status={status} />
+
+                        <DataCard
+                            status={status}
+                            onLoad={handleLoadData}
+                            onCollect={handleCollectData}
+                            loading={loading.data}
+                            message={messages.data}
+                        />
+
+                        <TrainingCard
+                            status={status}
+                            onTrain={handleTrain}
+                            loading={loading.train}
+                            progress={progress.train}
+                            message={messages.train}
+                        />
+
+                        <OptimizationCard
+                            status={status}
+                            onOptimize={handleOptimize}
+                            loading={loading.optimize}
+                            message={messages.optimize}
+                        />
+
+                        <FiltersCard filters={filters} />
+
+                        <FeatureImportanceCard features={features} />
+
+                        <BacktestCard backtest={backtest} />
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+</html>
