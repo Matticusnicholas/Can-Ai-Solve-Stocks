@@ -226,6 +226,20 @@ def run_backtest(args):
     print(f"  Total Breakouts Captured: {results['total_breakouts_captured']}")
 
 
+def train_gpu(args):
+    """Train ML models with GPU acceleration"""
+    from src.ml.train_gpu import run_gpu_pipeline
+
+    run_gpu_pipeline(
+        breakout_threshold=args.threshold,
+        lookforward_days=args.days,
+        use_lstm=args.lstm,
+        xgb_estimators=args.xgb_trees,
+        lgb_estimators=args.lgb_trees,
+        lstm_epochs=args.lstm_epochs
+    )
+
+
 def serve_web(args):
     """Start web server"""
     print("=" * 60)
@@ -273,11 +287,21 @@ def main():
     collect_parser = subparsers.add_parser('collect', help='Collect S&P 500 data')
     collect_parser.add_argument('--period', default='10y', help='Data period (default: 10y)')
 
-    # Train command
-    train_parser = subparsers.add_parser('train', help='Train ML models')
+    # Train command (CPU)
+    train_parser = subparsers.add_parser('train', help='Train ML models (CPU)')
     train_parser.add_argument('--threshold', type=float, default=0.20, help='Breakout threshold (default: 0.20)')
     train_parser.add_argument('--days', type=int, default=63, help='Lookforward days (default: 63)')
     train_parser.add_argument('--test-size', type=float, default=0.2, help='Test set size (default: 0.2)')
+
+    # Train GPU command
+    train_gpu_parser = subparsers.add_parser('train-gpu', help='Train ML models with GPU/CUDA acceleration')
+    train_gpu_parser.add_argument('--threshold', type=float, default=0.20, help='Breakout threshold (default: 0.20)')
+    train_gpu_parser.add_argument('--days', type=int, default=63, help='Lookforward days (default: 63)')
+    train_gpu_parser.add_argument('--xgb-trees', type=int, default=1000, help='XGBoost trees (default: 1000)')
+    train_gpu_parser.add_argument('--lgb-trees', type=int, default=1000, help='LightGBM trees (default: 1000)')
+    train_gpu_parser.add_argument('--lstm-epochs', type=int, default=50, help='LSTM epochs (default: 50)')
+    train_gpu_parser.add_argument('--lstm', action='store_true', default=True, help='Use LSTM (default: True)')
+    train_gpu_parser.add_argument('--no-lstm', dest='lstm', action='store_false', help='Disable LSTM')
 
     # Optimize command
     optimize_parser = subparsers.add_parser('optimize', help='Optimize filter criteria')
@@ -313,6 +337,8 @@ def main():
         collect_data(args)
     elif args.command == 'train':
         train_model(args)
+    elif args.command == 'train-gpu':
+        train_gpu(args)
     elif args.command == 'optimize':
         optimize_filters(args)
     elif args.command == 'backtest':

@@ -1,0 +1,25 @@
+# CUDA/GPU Acceleration (install separately based on your CUDA version)
+# These require NVIDIA GPU with CUDA toolkit installed
+
+# For CUDA 11.8:
+# pip install cudf-cu11 cuml-cu11 --extra-index-url=https://pypi.nvidia.com
+
+# For CUDA 12.x:
+# pip install cudf-cu12 cuml-cu12 --extra-index-url=https://pypi.nvidia.com
+
+# XGBoost with GPU (already supports GPU via tree_method='gpu_hist')
+xgboost>=2.0.0
+
+# LightGBM with GPU (needs to be built with GPU support)
+# pip install lightgbm --install-option=--gpu
+
+# PyTorch with CUDA (pick your CUDA version)
+# CUDA 11.8: pip install torch --index-url https://download.pytorch.org/whl/cu118
+# CUDA 12.1: pip install torch --index-url https://download.pytorch.org/whl/cu121
+torch>=2.0.0
+
+# RAPIDS cuML (GPU-accelerated scikit-learn)
+# pip install cuml-cu11 --extra-index-url=https://pypi.nvidia.com
+
+# Additional GPU utilities
+pynvml>=11.0.0

@@ -54,10 +54,18 @@ if "%COMMAND%"=="collect" (
 )
 
 if "%COMMAND%"=="train" (
-    echo Training ML models...
+    echo Training ML models [CPU]...
     echo This may take 5-15 minutes depending on your hardware.
     echo.
     python main.py train
+    goto :end
+)
+
+if "%COMMAND%"=="train-gpu" (
+    echo Training ML models with GPU/CUDA acceleration...
+    echo Using XGBoost GPU, LightGBM GPU, and PyTorch LSTM
+    echo.
+    python main.py train-gpu %2 %3 %4 %5 %6 %7 %8 %9
     goto :end
 )
 
@@ -93,13 +101,20 @@ echo.
 echo Usage: run.bat [command]
 echo.
 echo Commands:
-echo   serve     Start web dashboard (default)
-echo   collect   Download S&P 500 historical data
-echo   train     Train ML models
-echo   optimize  Find optimal filter criteria
-echo   backtest  Validate filters on historical data
-echo   all       Run complete pipeline
-echo   help      Show this help message
+echo   serve      Start web dashboard (default)
+echo   collect    Download S&P 500 historical data
+echo   train      Train ML models (CPU)
+echo   train-gpu  Train ML models with GPU/CUDA acceleration
+echo   optimize   Find optimal filter criteria
+echo   backtest   Validate filters on historical data
+echo   all        Run complete pipeline
+echo   help       Show this help message
+echo.
+echo GPU Options (for train-gpu):
+echo   --xgb-trees N     XGBoost trees (default: 1000)
+echo   --lgb-trees N     LightGBM trees (default: 1000)
+echo   --lstm-epochs N   LSTM epochs (default: 50)
+echo   --no-lstm         Disable LSTM model
 echo.
 
 :end
